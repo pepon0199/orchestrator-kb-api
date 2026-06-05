@@ -1,4 +1,7 @@
 const express = require("express");
+const mammoth = require("mammoth");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,11 +17,32 @@ app.get("/", (req, res) => {
 });
 
 // Main KB endpoint
-app.get("/orchestrator_kb", (req, res) => {
-  res.json({
-    extractedText:
-      "This is a test KB response for the orchestrator only. Use this extractedText only for orchestrator triage. Do not pass this KB content to invoked agents."
-  });
+app.get("/orchestrator_kb", async (req, res) => {
+  try {
+    const docPath = path.join(__dirname, "docs", "orchestrator_kb.docx");
+
+    if (!fs.existsSync(docPath)) {
+      return res.status(404).json({
+        extractedText: "",
+        error: "KB document not found"
+      });
+    }
+
+    const result = await mammoth.extractRawText({ path: docPath });
+
+    const extractedText = result.value || "";
+
+    return res.json({
+      extractedText: extractedText.trim()
+    });
+  } catch (error) {
+    console.error("Failed to extract KB document text:", error);
+
+    return res.status(500).json({
+      extractedText: "",
+      error: "Failed to extract KB document text"
+    });
+  }
 });
 
 app.listen(PORT, () => {
