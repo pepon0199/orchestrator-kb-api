@@ -8,43 +8,55 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Health check endpoint
-app.get("/", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "orchestrator_kb API is running"
-  });
-});
+async function extractDocxText(fileName) {
+  const docPath = path.join(__dirname, "docs", fileName);
 
-// Main KB endpoint
-app.get("/orchestrator_kb", async (req, res) => {
+  if (!fs.existsSync(docPath)) {
+    const error = new Error(`KB document not found: ${fileName}`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const result = await mammoth.extractRawText({ path: docPath });
+  return (result.value || "").trim();
+}
+
+async function handleKbRequest(req, res, fileName) {
   try {
-    const docPath = path.join(__dirname, "docs", "orchestrator_kb.docx");
-
-    if (!fs.existsSync(docPath)) {
-      return res.status(404).json({
-        extractedText: "",
-        error: "KB document not found"
-      });
-    }
-
-    const result = await mammoth.extractRawText({ path: docPath });
-
-    const extractedText = result.value || "";
+    const extractedText = await extractDocxText(fileName);
 
     return res.json({
-      extractedText: extractedText.trim()
+      extractedText
     });
   } catch (error) {
     console.error("Failed to extract KB document text:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       extractedText: "",
-      error: "Failed to extract KB document text"
+      error: error.message || "Failed to extract KB document text"
     });
   }
+}
+
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "KB API is running",
+    endpoints: ["/orchestrator_kb", "/unilateral_nda_kb"]
+  });
+});
+
+// Existing orchestrator KB endpoint
+app.get("/orchestrator_kb", (req, res) => {
+  return handleKbRequest(req, res, "orchestrator_kb.docx");
+});
+
+// New unilateral NDA KB endpoint
+app.get("/unilateral_nda_kb", (req, res) => {
+  return handleKbRequest(req, res, "unilateral_nda_kb.docx");
 });
 
 app.listen(PORT, () => {
-  console.log(`orchestrator_kb API running on port ${PORT}`);
+  console.log(`KB API running on port ${PORT}`);
 });
