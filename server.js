@@ -43,7 +43,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "ok",
     message: "KB API is running",
-    endpoints: ["/orchestrator_kb", "/unilateral_nda_kb", "/non_compete_nda_kb"]
+    endpoints: ["/orchestrator_kb", "/unilateral_nda_kb", "/non_compete_nda_kb", "/individual_nda_kb"]
   });
 });
 
@@ -60,6 +60,11 @@ app.get("/unilateral_nda_kb", (req, res) => {
 // New non compete NDA KB endpoint
 app.get("/non_compete_nda_kb", (req, res) => {
   return handleKbRequest(req, res, "non_compete_nda_kb.docx");
+});
+
+// New Individual NDA KB endpoint
+app.get("/individual_nda_kb", (req, res) => {
+  return handleKbRequest(req, res, "individual_nda_kb.docx");
 });
 
 app.listen(PORT, () => {
